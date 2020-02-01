@@ -12,6 +12,7 @@ var Lang = imports.lang;
 var St = imports.gi.St;
 var Pango = imports.gi.Pango;
 
+var Scratch = Extension.imports.scratch;
 var Tiling = Extension.imports.tiling;
 var utils = Extension.imports.utils;
 var debug = utils.debug;
@@ -125,7 +126,10 @@ class Minimap extends Array {
         let time = animate ? 0.25 : 0;
         Tweener.addTween(this.actor,
                          {opacity: 0, time, mode: Clutter.AnimationMode.EASE_OUT_EXPO,
-                          onComplete: () => this.actor.hide() });
+                          onComplete: () => {
+                            this.actor.hide();
+                            Scratch.fixBackdrop();
+                          } });
     }
 
     createClones() {

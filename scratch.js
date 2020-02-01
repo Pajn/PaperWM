@@ -12,9 +12,9 @@ var Main = imports.ui.main;
 
 var TopBar = Extension.imports.topbar;
 var Tiling = Extension.imports.tiling;
-var utils = Extension.imports.utils;
-var Tweener = utils.tweener;
-var debug = utils.debug;
+var Utils = Extension.imports.utils;
+var Tweener = Utils.tweener;
+var debug = Utils.debug;
 var float, scratchFrame; // symbols used for expando properties on metawindow
 var backdrop;
 
@@ -25,24 +25,28 @@ class Backdrop {
         actor.set_style('background-color: rgba(0, 0, 0, 0.35);');
         this.actor = actor;
 
-        Main.uiGroup.add_actor(this.actor);
+        global.window_group.add_child(this.actor);
+        Main.layoutManager.trackChrome(this.actor);
     }
 
     show(animate) {
         if (this.destroyed)
             return;
+        this.visible = true;
         this.actor.width = this.monitor.width;
         this.actor.height = this.monitor.height;
         this.actor.set_position(this.monitor.x, this.monitor.y);
         this.actor.show();
         let time = animate ? 0.25 : 0;
         Tweener.addTween(this.actor,
-                         {opacity: 255, time, mode: Clutter.AnimationMode.EASE_OUT_EXPO});
+                         {opacity: 255, time, mode: Clutter.AnimationMode.EASE_OUT_EXPO,
+                          onComplete: fixBackdrop });
     }
 
     hide(animate) {
         if (this.destroyed)
             return;
+        this.visible = false;
         let time = animate ? 0.25 : 0;
         Tweener.addTween(this.actor,
                          {opacity: 0, time, mode: Clutter.AnimationMode.EASE_OUT_EXPO,
@@ -116,6 +120,7 @@ function makeScratch(metaWindow) {
     if (!metaWindow.minimized) {
         backdrop.show(true);
         Tiling.showWindow(metaWindow);
+        fixBackdrop();
     }
 
     if (fromTiling) {
@@ -124,7 +129,7 @@ function makeScratch(metaWindow) {
 
         if (metaWindow[scratchFrame]) {
             let sf = metaWindow[scratchFrame];
-            if (utils.monitorOfPoint(sf.x, sf.y) === focusMonitor()) {
+            if (Utils.monitorOfPoint(sf.x, sf.y) === focusMonitor()) {
                 targetFrame = sf;
             }
         }
@@ -232,6 +237,7 @@ function show(top) {
             meta_window.get_compositor_private().show();
     });
     windows[0].activate(global.get_current_time());
+    fixBackdrop();
 
     let monitor = focusMonitor();
     if (monitor.clickOverlay)
@@ -244,6 +250,16 @@ function hide() {
         meta_window.minimize();
     });
     backdrop.hide(true);
+}
+
+function fixBackdrop() {
+    if (backdrop && backdrop.visible) {
+        let nonScratchWindow = global.display.get_tab_list(Meta.TabList.NORMAL, null)
+            .find(mw => !isScratchWindow(mw) && mw.get_compositor_private())
+        if (nonScratchWindow) {
+            backdrop.actor.raise(nonScratchWindow.get_compositor_private());
+        }
+    }
 }
 
 // Monkey patch the alt-space menu

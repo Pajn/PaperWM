@@ -14,8 +14,8 @@ var Main = imports.ui.main;
 var Shell = imports.gi.Shell;
 var Gio = imports.gi.Gio;
 var Signals = imports.signals;
-var utils = Extension.imports.utils;
-var debug = utils.debug;
+var Utils = Extension.imports.utils;
+var debug = Utils.debug;
 
 var Gdk = imports.gi.Gdk;
 
@@ -57,8 +57,8 @@ var signals, oldSpaces, backgroundGroup, oldMonitors, WindowCloneLayout,
     grabSignals;
 function init() {
     // Symbol to retrieve the focus handler id
-    signals = new utils.Signals();
-    grabSignals = new utils.Signals();
+    signals = new Utils.Signals();
+    grabSignals = new Utils.Signals();
     oldSpaces = new Map();
     oldMonitors = new Map();
 
@@ -116,7 +116,7 @@ class Space extends Array {
     constructor (workspace, container, doInit) {
         super(0);
         this.workspace = workspace;
-        this.signals = new utils.Signals();
+        this.signals = new Utils.Signals();
 
         // The windows that should be represented by their WindowActor
         this.visible = [];
@@ -257,9 +257,9 @@ class Space extends Array {
         }
 
         this.signals.connect(workspace, "window-added",
-                             utils.dynamic_function_ref("add_handler", Me));
+                             Utils.dynamic_function_ref("add_handler", Me));
         this.signals.connect(workspace, "window-removed",
-                             utils.dynamic_function_ref("remove_handler", Me));
+                             Utils.dynamic_function_ref("remove_handler", Me));
         this.signals.connect(Main.overview, 'showing',
                              this.startAnimate.bind(this));
         this.signals.connect(Main.overview, 'hidden', this.moveDone.bind(this));
@@ -706,8 +706,8 @@ class Space extends Array {
             || targetRow < 0 || targetRow >= column.length)
             return;
 
-        utils.swap(this[index], row, targetRow);
-        utils.swap(this, index, targetIndex);
+        Utils.swap(this[index], row, targetRow);
+        Utils.swap(this, index, targetIndex);
 
         this.layout();
         this.emit('swapped', index, targetIndex, row, targetRow);
@@ -720,7 +720,7 @@ class Space extends Array {
         if (!column)
             return false;
         let row = column.indexOf(this.selectedWindow);
-        if (utils.in_bounds(column, row + dir) == false) {
+        if (Utils.in_bounds(column, row + dir) == false) {
             index += dir;
             if (dir === 1) {
                 if (index < this.length) row = 0;
@@ -868,6 +868,7 @@ class Space extends Array {
         this._floating.forEach(showWindow);
 
         this.fixOverlays();
+        Scratch.fixBackdrop();
 
         if (!Meta.is_wayland_compositor()) {
             // See startAnimate
@@ -1217,7 +1218,7 @@ class Spaces extends Map {
 
         this._initDone = false;
         this.clickOverlays = [];
-        this.signals = new utils.Signals();
+        this.signals = new Utils.Signals();
         this.stack = [];
         let spaceContainer = new Clutter.Actor({name: 'spaceContainer'});
         spaceContainer.hide();
@@ -1231,7 +1232,7 @@ class Spaces extends Map {
             this.addSpace(workspace);
         }
         this.signals.connect(workspaceManager, 'notify::n-workspaces',
-                             utils.dynamic_function_ref('workspacesChanged', this).bind(this));
+                             Utils.dynamic_function_ref('workspacesChanged', this).bind(this));
 
         let OVERRIDE_SCHEMA;
         if (global.screen) {
@@ -1543,7 +1544,7 @@ class Spaces extends Map {
         y -= monitor.y;
         if (x < 0 || x > monitor.width ||
             y < 0 || y > monitor.height) {
-            utils.warpPointer(monitor.x + Math.floor(monitor.width/2),
+            Utils.warpPointer(monitor.x + Math.floor(monitor.width/2),
                               monitor.y + Math.floor(monitor.height/2));
         }
 
@@ -2018,7 +2019,7 @@ class Spaces extends Map {
         debug('window-created', metaWindow.title);
         let actor = metaWindow.get_compositor_private();
 
-        if (utils.version[1] < 34) {
+        if (Utils.version[1] < 34) {
             animateWindow(metaWindow);
         } else {
             /* HACK 3.34: Hidden actors aren't allocated if hidden, use opacity
@@ -2053,8 +2054,8 @@ Signals.addSignalMethods(Spaces.prototype);
 function registerWindow(metaWindow) {
     if (metaWindow.clone) {
         // Should no longer be possible, but leave a trace just to be sure
-        utils.warn("window already registered", metaWindow.title);
-        utils.print_stacktrace();
+        Utils.warn("window already registered", metaWindow.title);
+        Utils.print_stacktrace();
     }
 
     if (metaWindow.is_override_redirect()) {
@@ -2553,6 +2554,7 @@ function move_to(space, metaWindow, { x, y, force }) {
                      });
 
     space.fixOverlays(metaWindow);
+    Scratch.fixBackdrop();
 }
 
 var inGrab = false;
@@ -2616,7 +2618,7 @@ function grabEnd(metaWindow, type) {
 
 // `MetaWindow::focus` handling
 function focus_handler(metaWindow, user_data) {
-    debug("focus:", metaWindow.title, utils.framestr(metaWindow.get_frame_rect()));
+    debug("focus:", metaWindow.title, Utils.framestr(metaWindow.get_frame_rect()));
 
     if (metaWindow.fullscreen) {
         TopBar.hide();
@@ -2677,7 +2679,7 @@ function focus_handler(metaWindow, user_data) {
 
     ensureViewport(metaWindow, space);
 }
-var focus_wrapper = utils.dynamic_function_ref('focus_handler', Me);
+var focus_wrapper = Utils.dynamic_function_ref('focus_handler', Me);
 
 /**
    Push all minimized windows to the scratch layer
@@ -2688,7 +2690,7 @@ function minimizeHandler(metaWindow) {
         Scratch.makeScratch(metaWindow);
     }
 }
-var minimizeWrapper = utils.dynamic_function_ref('minimizeHandler', Me);
+var minimizeWrapper = Utils.dynamic_function_ref('minimizeHandler', Me);
 
 /**
   `WindowActor::show` handling
@@ -2704,7 +2706,7 @@ function showHandler(actor) {
 
     // HACK: use opacity instead of hidden on new windows
     if (metaWindow.unmapped) {
-        if (utils.version[1] < 34)
+        if (Utils.version[1] < 34)
             animateWindow(metaWindow);
         else
             actor.opacity = 0;
@@ -2719,7 +2721,7 @@ function showHandler(actor) {
         animateWindow(metaWindow);
     }
 }
-var showWrapper = utils.dynamic_function_ref('showHandler', Me);
+var showWrapper = Utils.dynamic_function_ref('showHandler', Me);
 
 function showWindow(metaWindow) {
     let actor = metaWindow.get_compositor_private();
@@ -2796,7 +2798,7 @@ function cycleWindowWidth(metaWindow) {
     }
 
     // 10px slack to avoid locking up windows that only resize in increments > 1px
-    let targetWidth = Math.min(utils.findNext(frame.width, steps, sizeSlack), workArea.width);
+    let targetWidth = Math.min(Utils.findNext(frame.width, steps, sizeSlack), workArea.width);
     let targetX = frame.x;
 
     if (Scratch.isScratchWindow(metaWindow)) {
@@ -2824,10 +2826,10 @@ function cycleWindowHeight(metaWindow) {
     function calcTargetHeight(available) {
         let targetHeight;
         if (steps[0] <= 1) { // ratio steps
-            let targetR = utils.findNext(frame.height/available, steps, sizeSlack/available);
+            let targetR = Utils.findNext(frame.height/available, steps, sizeSlack/available);
             targetHeight = Math.floor(targetR * available);
         } else { // pixel steps
-            targetHeight = utils.findNext(frame.height, steps, sizeSlack);
+            targetHeight = Utils.findNext(frame.height, steps, sizeSlack);
         }
         return Math.min(targetHeight, available);
     }
@@ -2886,8 +2888,8 @@ function centerWindowHorizontally(metaWindow) {
     let [pointerX, pointerY, mask] = global.get_pointer();
     let relPointerX = pointerX - monitor.x - space.cloneContainer.x;
     let relPointerY = pointerY - monitor.y - space.cloneContainer.y;
-    if (utils.isPointInsideActor(metaWindow.clone, relPointerX, relPointerY)) {
-        utils.warpPointer(pointerX + dx, pointerY)
+    if (Utils.isPointInsideActor(metaWindow.clone, relPointerX, relPointerY)) {
+        Utils.warpPointer(pointerX + dx, pointerY)
     }
     if (space.indexOf(metaWindow) === -1) {
         metaWindow.move_frame(true, targetX + monitor.x, frame.y);
@@ -2901,13 +2903,13 @@ function centerWindowHorizontally(metaWindow) {
  * "Fit" values such that they sum to `targetSum`
  */
 function fitProportionally(values, targetSum) {
-    let sum = utils.sum(values);
+    let sum = Utils.sum(values);
     let weights = values.map(v => v / sum);
 
-    let fitted = utils.zip(values, weights).map(
+    let fitted = Utils.zip(values, weights).map(
         ([h, w]) => Math.round(targetSum * w)
     )
-    let r = targetSum - utils.sum(fitted);
+    let r = targetSum - Utils.sum(fitted);
     fitted[0] += r;
     return fitted;
 }
