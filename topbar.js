@@ -21,6 +21,7 @@ var Tweener = Extension.imports.utils.tweener;
 
 var Tiling = Extension.imports.tiling;
 var Navigator = Extension.imports.navigator;
+var Scratch = Extension.imports.scratch;
 var Utils = Extension.imports.utils;
 var Scratch = Extension.imports.scratch;
 
@@ -197,6 +198,46 @@ class ColorEntry {
     }
 }
 
+var ScratchIcon = Utils.registerClass(
+class ScratchIcon extends PanelMenu.Button {
+    _init() {
+        super._init(0.5, 'ScratchIcon', false);
+
+        this.actor.name = 'scratch-icon-button';
+
+        this._icon = new St.Icon({icon_name: 'window-restore-symbolic', icon_size: 28});
+
+        this.actor.add_actor(this._icon);
+    }
+
+    _onEvent(actor, event) {
+        let type = event.type();
+
+        if ((type == Clutter.EventType.TOUCH_END ||
+             type == Clutter.EventType.BUTTON_RELEASE)) {
+            if (Navigator.navigating) {
+                Navigator.getNavigator().finish();
+            } else if (event.get_button() === Clutter.BUTTON_PRIMARY) {
+                Scratch.toggleScratch();
+            }
+        }
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+
+    destroy() {
+        this.signals.destroy();
+        super.destroy();
+    }
+
+    update() {
+        if (Scratch.isScratchActive()) {
+            this._icon.set_icon_name('window-minimize-symbolic')
+        } else {
+            this._icon.set_icon_name('window-restore-symbolic')
+        }
+    }
+});
 var WorkspaceMenu = Utils.registerClass(
 class WorkspaceMenu extends PanelMenu.Button {
     _init() {
@@ -489,6 +530,7 @@ class WorkspaceMenu extends PanelMenu.Button {
     }
 });
 
+var scratchIcon;
 var menu;
 var orginalActivitiesText;
 var screenSignals, signals;
@@ -503,6 +545,7 @@ var panelBoxShowId, panelBoxHideId;
 function enable () {
     Main.panel.statusArea.activities.actor.hide();
 
+    scratchIcon = new ScratchIcon();
     menu = new WorkspaceMenu();
     // Work around 'actor' warnings
     let panelActor = Main.panel.actor;
@@ -518,6 +561,8 @@ function enable () {
     }
     Main.panel.addToStatusArea('WorkspaceMenu', menu, 0, 'left');
     menu.actor.show();
+    Main.panel.addToStatusArea('ScratchIcon', scratchIcon, 0, 'left');
+    scratchIcon.show();
 
     // Force transparency
     panelActor.set_style('background-color: rgba(0, 0, 0, 0.35);');
@@ -606,6 +651,9 @@ function fixTopBar() {
     panelBox.show();
 }
 
+function updateScratchLayerIndicator() {
+    scratchIcon.update()
+};
 /**
    Override the activities label with the workspace name.
    let workspaceIndex = 0

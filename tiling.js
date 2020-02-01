@@ -2311,6 +2311,7 @@ function remove_handler(workspace, meta_window) {
             meta_window.clone.destroy();
             meta_window.clone = null;
         }
+        TopBar.updateScratchLayerIndicator();
     }
 }
 

@@ -118,6 +118,7 @@ function makeScratch(metaWindow) {
     let monitor = focusMonitor();
     if (monitor.clickOverlay)
         monitor.clickOverlay.hide();
+    TopBar.updateScratchLayerIndicator();
 }
 
 function unmakeScratch(metaWindow) {
@@ -192,6 +193,7 @@ function show(top) {
     let monitor = focusMonitor();
     if (monitor.clickOverlay)
         monitor.clickOverlay.hide();
+    TopBar.updateScratchLayerIndicator();
 }
 
 function hide() {
@@ -199,6 +201,7 @@ function hide() {
     windows.map(function(meta_window) {
         meta_window.minimize();
     });
+    TopBar.updateScratchLayerIndicator();
 }
 
 // Monkey patch the alt-space menu
