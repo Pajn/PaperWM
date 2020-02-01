@@ -206,7 +206,8 @@ class ScratchIcon extends PanelMenu.Button {
         this.actor.name = 'scratch-icon-button';
 
         this._icon = new St.Icon({icon_name: 'window-restore-symbolic', icon_size: 28});
-
+        
+        this.update();
         this.actor.add_actor(this._icon);
     }
 
@@ -231,10 +232,16 @@ class ScratchIcon extends PanelMenu.Button {
     }
 
     update() {
-        if (Scratch.isScratchActive()) {
-            this._icon.set_icon_name('window-minimize-symbolic')
+        let scratchWindows = Scratch.getScratchWindows()
+        if (scratchWindows.length > 0) {
+            if (scratchWindows.some(metaWindow => !metaWindow.minimized)) {
+                this._icon.set_icon_name('window-minimize-symbolic')
+            } else {
+                this._icon.set_icon_name('window-restore-symbolic')
+            }
+            this._icon.show();
         } else {
-            this._icon.set_icon_name('window-restore-symbolic')
+            this._icon.hide();
         }
     }
 });
@@ -559,10 +566,13 @@ function enable () {
             space.label.clutter_text.set_font_description(fontDescription);
         }
     }
-    Main.panel.addToStatusArea('WorkspaceMenu', menu, 0, 'left');
-    menu.actor.show();
+    fixLabel(menu._label);
+    signals.connect(menu._label, 'notify::allocation', fixLabel);
+
     Main.panel.addToStatusArea('ScratchIcon', scratchIcon, 0, 'left');
     scratchIcon.show();
+    Main.panel.addToStatusArea('WorkspaceMenu', menu, 0, 'left');
+    menu.actor.show();
 
     // Force transparency
     panelActor.set_style('background-color: rgba(0, 0, 0, 0.35);');
