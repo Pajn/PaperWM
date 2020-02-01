@@ -5,15 +5,58 @@ if (imports.misc.extensionUtils.extensions) {
     Extension = imports.ui.main.extensionManager.lookup("paperwm@hedning:matrix.org");
 }
 
+var Clutter = imports.gi.Clutter;
 var Meta = imports.gi.Meta;
+var St = imports.gi.St;
 var Main = imports.ui.main;
 
 var TopBar = Extension.imports.topbar;
 var Tiling = Extension.imports.tiling;
 var utils = Extension.imports.utils;
+var Tweener = utils.tweener;
 var debug = utils.debug;
 var float, scratchFrame; // symbols used for expando properties on metawindow
+var backdrop;
 
+class Backdrop {
+    constructor(monitor) {
+        this.monitor = monitor;
+        let actor = new St.Widget({name: 'scratch-backdrop'});
+        actor.set_style('background-color: rgba(0, 0, 0, 0.35);');
+        this.actor = actor;
+
+        Main.uiGroup.add_actor(this.actor);
+    }
+
+    show(animate) {
+        if (this.destroyed)
+            return;
+        this.actor.width = this.monitor.width;
+        this.actor.height = this.monitor.height;
+        this.actor.set_position(this.monitor.x, this.monitor.y);
+        this.actor.show();
+        let time = animate ? 0.25 : 0;
+        Tweener.addTween(this.actor,
+                         {opacity: 255, time, mode: Clutter.AnimationMode.EASE_OUT_EXPO});
+    }
+
+    hide(animate) {
+        if (this.destroyed)
+            return;
+        let time = animate ? 0.25 : 0;
+        Tweener.addTween(this.actor,
+                         {opacity: 0, time, mode: Clutter.AnimationMode.EASE_OUT_EXPO,
+                          onComplete: () => this.actor.hide() });
+    }
+
+    destroy() {
+        if (this.destroyed)
+            return;
+        this.destroyed = true;
+        this.actor.destroy();
+        this.actor = null;
+    }
+}
 
 function focusMonitor() {
     if (global.display.focus_window) {
@@ -70,8 +113,10 @@ function makeScratch(metaWindow) {
     metaWindow.make_above();
     metaWindow.stick();  // NB! Removes the window from the tiling (synchronously)
 
-    if (!metaWindow.minimized)
+    if (!metaWindow.minimized) {
+        backdrop.show(true);
         Tiling.showWindow(metaWindow);
+    }
 
     if (fromTiling) {
         let f = metaWindow.get_frame_rect();
@@ -178,6 +223,7 @@ function show(top) {
         windows = windows.slice(0,1);
 
     TopBar.show();
+    backdrop.show(true);
 
     windows.slice().reverse()
         .map(function(meta_window) {
@@ -197,6 +243,7 @@ function hide() {
     windows.map(function(meta_window) {
         meta_window.minimize();
     });
+    backdrop.hide(true);
 }
 
 // Monkey patch the alt-space menu
@@ -210,6 +257,7 @@ function init() {
 }
 
 function enable() {
+    backdrop = new Backdrop(Main.layoutManager.primaryMonitor);
     WindowMenu.WindowMenu.prototype._buildMenu =
         function (window) {
             let item;
@@ -225,4 +273,8 @@ function enable() {
 
 function disable() {
     WindowMenu.WindowMenu.prototype._buildMenu = originalBuildMenu;
+    if (backdrop) {
+        backdrop.destroy();
+        backdrop = null;
+    }
 }
