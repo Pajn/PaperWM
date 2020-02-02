@@ -227,7 +227,6 @@ class ScratchIcon extends PanelMenu.Button {
 
 
     destroy() {
-        this.signals.destroy();
         super.destroy();
     }
 
