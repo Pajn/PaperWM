@@ -3,7 +3,6 @@
     border-radius: 5px;
 }
 
-
 .workspace-icon-button {
     -st-icon-style: symbolic;
     border: none;
@@ -18,3 +17,14 @@
 .paperwm-selection {
     border-radius: 8px;
 }
+
+.tile-preview {
+    border-color: #77216F;
+    background-color: rgba(119, 33, 111, 0.4);
+}
+
+.tile-selection {
+    border-color: rgba(119, 33, 111, 1);
+    background-color: rgba(119, 33, 111, 0.8);
+}
+
